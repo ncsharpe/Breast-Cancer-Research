@@ -1,0 +1,474 @@
+SAS Code
+
+* import data sets;
+
+libname MyFiles '/home/u47422170/SASUSER';
+
+data MyFiles.Gene_Data;
+	infile '/home/u47422170/SASUSER/Breast_Gene_Data2.csv' dlm=',' firstobs=2;
+	input CaseID $12. PDL1 $ PD1 $ CTLA4 $ TCRalpha ;
+libname MyFiles '/home/u47422170/SASUSER';
+
+data MyFiles.Clinical_Data;
+	infile '/home/u47422170/SASUSER/Breast_Clinical_Data1.csv' dlm=',' firstobs=2;
+	input CaseID $12. AgeAtDiagnosis $ YearOfBirth $ Gender $ Ethnicity $ Race $ VitalStatus $ DaysDiagnosedToDeath $ YearOfDeath $ DaysSinceFirstDiagnosed $ YearOfDiagnosis $ TreatmentType $ StageAtDiagnosis;
+
+*merge datasets;
+
+data MyFiles.Clinical_Gene_Data;
+    merge MyFiles.Gene_Data MyFiles.Clinical_Data;
+run;
+
+proc print data=MyFiles.Clinical_Gene_Data;
+	where ethnicity ="not repo";
+    title 'Data Set COMBINED';
+run;
+
+proc means data = myfiles.clinical_gene_data;
+run;
+
+*change variables in the dataset from character to numeric, create new variables;
+
+data MyFiles.Clinical_Gene_Data1;
+	set MyFiles.Clinical_Gene_Data(rename=(CaseID=old));
+	CaseID = old;
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data2;
+	set MyFiles.Clinical_Gene_Data1(rename=(AgeAtDiagnosis=old));
+	AgeAtDiagnosis = input(old, 8.);
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data3;
+	set MyFiles.Clinical_Gene_Data2(rename=(YearOfBirth=old));
+	YearOfBirth = input(old, 8.);
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data4;
+	set MyFiles.Clinical_Gene_Data3(rename=(Gender=old));
+	Gender = old;
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data5;
+	set MyFiles.Clinical_Gene_Data4(rename=(Gender=Gender));
+	If Gender ='female' then NumericGender = 1; else NumericGender = 2;
+run;
+
+data MyFiles.Clinical_Gene_Data6;
+	set MyFiles.Clinical_Gene_Data5(rename=(Ethnicity=old));
+	Ethnicity = old;
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data7;
+	set MyFiles.Clinical_Gene_Data6(rename=(Ethnicity=Ethnicity));
+	if Ethnicity ="not hisp" then NumericEthnicity =2; else if Ethnicity ='hispanic' then NumericEthnicity = 1; else NumericEthnicity = 0;
+run;
+
+data MyFiles.Clinical_Gene_Data8;
+	set MyFiles.Clinical_Gene_Data7(rename=(Race=old));
+	Race = old;
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data9;
+	set MyFiles.Clinical_Gene_Data8(rename=(Race=Race));
+	if race = "white" then NumericRace = 1; else if race = "black or" then NumericRace = 2; else if race = "asian" then NumericRace = 3; else NumericRace = 0 ;
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data10;
+	set MyFiles.Clinical_Gene_Data9(rename=(VitalStatus=old));
+	VitalStatus = input(old, 8.);
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data11;
+	set MyFiles.Clinical_Gene_Data10(rename=(DaysDiagnosedToDeath=old));
+	DaysDiagnosedToDeath = input(old, 8.);
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data12;
+	set MyFiles.Clinical_Gene_Data11(rename=(YearOfDeath=old));
+	YearOfDeath = input(old, 8.);
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data13;
+	set MyFiles.Clinical_Gene_Data12(rename=(DaysSinceFirstDiagnosed=old));
+	DaysSinceFirstDiagnosed = input(old, 8.);
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data14;
+	set MyFiles.Clinical_Gene_Data13(rename=(VitalStatus=VitalStatus));
+	if VitalStatus = "1" then LiveDieTime = DaysDiagnosedToDeath; else LiveDieTime = DaysSinceFirstDiagnosed;
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data15;
+	set MyFiles.Clinical_Gene_Data14(rename=(YearOfDiagnosis=old));
+	YearOfDiagnosis = input(old, 8.);
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data16;
+	set MyFiles.Clinical_Gene_Data15(rename=(TreatmentType=old));
+	TreatmentType = old;
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data17;
+	set MyFiles.Clinical_Gene_Data16(rename=(TreatmentType=TreatmentType));
+	If TreatmentType ='PT' then NumericTreatment = 1; else NumericTreatment = 2;
+run;
+
+data MyFiles.Clinical_Gene_Data18;
+	set MyFiles.Clinical_Gene_Data17(rename=(StageAtDiagnosis=old));
+	StageAtDiagnosis = old;
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data19;
+	set MyFiles.Clinical_Gene_Data18(rename=(PDL1=old));
+	PDL1 = input(old, 8.);
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data20;
+	set MyFiles.Clinical_Gene_Data19(rename=(PD1=old));
+	PD1 = input(old, 8.);
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data21;
+	set MyFiles.Clinical_Gene_Data20(rename=(CTLA4=old));
+	CTLA4 = input(old, 8.);
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data_Final;
+	set MyFiles.Clinical_Gene_Data21(rename=(TCRalpha=old));
+	TCRalpha = old;
+	drop old;
+run;
+
+data MyFiles.Clinical_Gene_Data_Final;
+	set myfiles.clinical_gene_data_final;
+	if Gender = "" then delete;
+run;
+
+proc means data =myfiles.Clinical_Gene_Data_Final N Nmiss mean std min P1 P5 P10 P25 P50 P75 P90 P95 P99 max;
+run;
+
+*Run regression equations on data;
+
+proc reg data=myfiles.clinical_gene_Data_final PLOTS(MAXPOINTS=NONE);
+  model DaysSinceFirstDiagnosed = PDL1 PD1 CTLA4 TCRalpha;
+run;
+
+proc reg data=myfiles.clinical_gene_Data_final PLOTS(MAXPOINTS=NONE);
+  model DaysSinceFirstDiagnosed = AgeAtDiagnosis YearOfDiagnosis StageAtDiagnosis NumericTreatment NumericGender NumericEthnicity NumericRace;
+run;
+
+proc reg data=myfiles.clinical_gene_Data_final PLOTS(MAXPOINTS=NONE);
+  model DaysDiagnosedToDeath = PDL1 PD1 CTLA4 TCRalpha;
+run;
+
+proc reg data=myfiles.clinical_gene_Data_final PLOTS(MAXPOINTS=NONE);
+  model DaysDiagnosedToDeath = AgeAtDiagnosis YearOfDiagnosis StageAtDiagnosis NumericTreatment NumericGender NumericEthnicity NumericRace;
+run;
+
+proc reg data=myfiles.clinical_gene_Data_final PLOTS(MAXPOINTS=NONE);
+  model DaysSinceFirstDiagnosed = AgeAtDiagnosis YearOfDiagnosis StageAtDiagnosis NumericTreatment NumericGender NumericEthnicity NumericRace PDL1 PD1 CTLA4 TCRalpha;
+run;
+
+proc reg data=myfiles.clinical_gene_Data_final PLOTS(MAXPOINTS=NONE);
+  model DaysDiagnosedToDeath = AgeAtDiagnosis YearOfDiagnosis StageAtDiagnosis NumericTreatment NumericGender NumericEthnicity NumericRace PDL1 PD1 CTLA4 TCRalpha;
+run;
+
+proc freq data=MyFiles.Clinical_Gene_Data_Final; 
+table Ethnicity; 
+run;
+
+proc logistic data=MyFiles.Clinical_Gene_Data_Final descending;
+model VitalStatus = AgeAtDiagnosis YearOfDiagnosis StageAtDiagnosis NumericTreatment NumericGender NumericEthnicity NumericRace PDL1 PD1 CTLA4 TCRalpha ;
+run;
+
+proc reg data=myfiles.clinical_gene_Data_final PLOTS(MAXPOINTS=NONE);
+  model PDL1 = PD1 CTLA4 TCRalpha;
+run;
+
+proc reg data=myfiles.clinical_gene_Data_final PLOTS(MAXPOINTS=NONE);
+  model PD1 = PDL1 CTLA4 TCRalpha;
+run;
+
+proc reg data=myfiles.clinical_gene_Data_final PLOTS(MAXPOINTS=NONE);
+  model  CTLA4 = PDL1 PD1 TCRalpha;
+run;
+
+proc reg data=myfiles.clinical_gene_Data_final PLOTS(MAXPOINTS=NONE);
+  model TCRalpha = PDL1 PD1 CTLA4;
+run;
+
+proc export data=work.high_low_tcralpha_labled
+    outfile='/home/u47422170/SASUSER\highlowtcralpha.csv'
+    dbms=csv
+    replace;
+run;
+
+*Determine quartiles using proc univariate, and seperate patients into high and low gene groups, run t-tests on those groups;
+
+proc univariate data =myfiles.clinical_gene_data_final;
+var TCRAlpha;
+run;
+
+DATA High_PDL1;
+    SET myfiles.clinical_gene_data_final;
+    IF (PDL1 GE 15.09 ) THEN OUTPUT;
+RUN;
+
+DATA Low_PDL1;
+    SET myfiles.clinical_gene_data_final;
+    IF (PDL1 LE 13.8) THEN OUTPUT;
+RUN;
+
+proc sort data = High_PDL1;
+by CaseID;
+run;
+
+proc sort data = Low_PDL1;
+by CaseID;
+run;
+
+data High_Low_PDL1;
+    merge Low_PDL1 High_PDL1 ;
+    by CaseID;
+run;
+
+data High_Low_PDL1_labled;
+	set High_Low_PDL1;
+	if (PDL1 GE 15.09 ) then PDL1Type = 'High';
+	if (PDL1 LE 13.8) then PDL1Type = 'Low';
+run;
+
+proc ttest data = High_Low_PDL1_labled sides = 2 alpha = 0.05 h0 = 0;
+   title "Two sample t-test on High and Low PDL1 Groups";
+   class PDL1Type; 
+   var DaysDiagnosedToDeath;
+   run;
+
+proc ttest data = High_Low_PDL1_labled sides = 2 alpha = 0.05 h0 = 0;
+   title "Two sample t-test on High and Low PDL1 Groups";
+   class PDL1Type; 
+   var DaysSinceFirstDiagnosed;
+   run;
+
+proc ttest data = High_Low_PDL1_labled sides = 2 alpha = 0.05 h0 = 0;
+   title "Two sample t-test on High and Low PDL1 Groups";
+   class PDL1Type; 
+   var VitalStatus;
+   run;
+
+DATA High_PD1;
+    SET myfiles.clinical_gene_data_final;
+    IF (PD1 GE 14.74 ) THEN OUTPUT;
+RUN;
+
+DATA Low_PD1;
+    SET myfiles.clinical_gene_data_final;
+    IF (PD1 LE 12.28) THEN OUTPUT;
+RUN;
+
+proc sort data = High_PD1;
+by CaseID;
+run;
+
+proc sort data = Low_PD1;
+by CaseID;
+run;
+
+data High_Low_PD1;
+    merge Low_PD1 High_PD1 ;
+    by CaseID;
+run;
+
+data High_Low_PD1_labled;
+	set High_Low_PD1;
+	if (PD1 GE 14.74 ) then PD1Type = 'High';
+	if (PD1 LE 12.28) then PD1Type = 'Low';
+run;
+
+proc ttest data = High_Low_PD1_labled sides = 2 alpha = 0.05 h0 = 0;
+   title "Two sample t-test on High and Low PD1 Groups";
+   class PD1Type; 
+   var DaysDiagnosedToDeath;
+   run;
+
+proc ttest data = High_Low_PD1_labled sides = 2 alpha = 0.05 h0 = 0;
+   title "Two sample t-test on High and Low PD1 Groups";
+   class PD1Type; 
+   var DaysSinceFirstDiagnosed;
+   run;
+
+proc ttest data = High_Low_PD1_labled sides = 2 alpha = 0.05 h0 = 0;
+   title "Two sample t-test on High and Low PDL1 Groups";
+   class PD1Type; 
+   var VitalStatus;
+   run;
+
+DATA High_CTLA4;
+    SET myfiles.clinical_gene_data_final;
+    IF (CTLA4 GE 15.06 ) THEN OUTPUT;
+RUN;
+
+DATA Low_CTLA4;
+    SET myfiles.clinical_gene_data_final;
+    IF (CTLA4 LE 12.58) THEN OUTPUT;
+RUN;
+
+proc sort data = High_CTLA4;
+by CaseID;
+run;
+
+proc sort data = Low_CTLA4;
+by CaseID;
+run;
+
+data High_Low_CTLA4;
+    merge Low_CTLA4 High_CTLA4 ;
+    by CaseID;
+run;
+
+data High_Low_CTLA4_labled;
+	set High_Low_CTLA4;
+	if (CTLA4 GE 15.06) then CTLA4Type = 'High';
+	if (CTLA4 LE 12.58) then CTLA4Type = 'Low';
+run;
+
+proc ttest data = High_Low_CTLA4_labled sides = 2 alpha = 0.05 h0 = 0;
+   title "Two sample t-test on High and Low CTLA4 Groups";
+   class CTLA4Type; 
+   var DaysDiagnosedToDeath;
+   run;
+
+proc ttest data = High_Low_CTLA4_labled sides = 2 alpha = 0.05 h0 = 0;
+   title "Two sample t-test on High and Low CTLA4 Groups";
+   class CTLA4Type; 
+   var DaysSinceFirstDiagnosed;
+   run;
+
+proc ttest data = High_Low_CTLA4_labled sides = 2 alpha = 0.05 h0 = 0;
+   title "Two sample t-test on High and Low CTLA4 Groups";
+   class CTLA4Type; 
+   var VitalStatus;
+   run;
+
+DATA High_TCRalpha;
+    SET myfiles.clinical_gene_data_final;
+    IF (TCRalpha GE 18.74 ) THEN OUTPUT;
+RUN;
+
+DATA Low_TCRalpha;
+    SET myfiles.clinical_gene_data_final;
+    IF (TCRalpha LE 16.94) THEN OUTPUT;
+RUN;
+
+proc sort data = High_TCRalpha;
+by CaseID;
+run;
+
+proc sort data = Low_TCRalpha;
+by CaseID;
+run;
+
+data High_Low_TCRalpha;
+    merge Low_TCRalpha High_TCRalpha ;
+    by CaseID;
+run;
+
+data High_Low_TCRalpha_labled;
+	set High_Low_TCRalpha;
+	if (TCRalpha GE 18.74) then TCRalphaType = 'High';
+	if (TCRalpha LE 16.94) then TCRalphaType = 'Low';
+run;
+
+proc ttest data = High_Low_TCRalpha_labled sides = 2 alpha = 0.05 h0 = 0;
+   title "Two sample t-test on High and Low TCRAlpha Groups";
+   class TCRalphaType; 
+   var DaysDiagnosedToDeath;
+   run;
+
+proc ttest data = High_Low_TCRalpha_labled sides = 2 alpha = 0.05 h0 = 0;
+   title "Two sample t-test on High and Low TCRalpha Groups";
+   class TCRalphaType; 
+   var DaysSinceFirstDiagnosed;
+   run;
+
+proc ttest data = High_Low_TCRalpha_labled sides = 2 alpha = 0.05 h0 = 0;
+   title "Two sample t-test on High and Low TCRalpha Groups";
+   class TCRalphaType; 
+   var VitalStatus;
+   run;
+
+R Code
+setwd("C:/Users/nolan/OneDrive/Documents/MIS581")
+getwd()
+Clinical<-read.csv("ClinicalGeneData.csv", header=TRUE)
+PD1<-read.csv("highlowpd1.csv", header=TRUE)
+PDL1<-read.csv("highlowpdl1.csv", header=TRUE)
+CTLA4<-read.csv("highlowctla4.csv", header=TRUE)
+TCRalpha<-read.csv("highlowtcralpha.csv", header=TRUE)
+head(Clinical)
+install.packages("survival")
+install.packages("ggplot2")
+install.packages("survminer")
+library(ggplot2)
+library(survival)
+library(survminer)
+
+##Survival curve code for the entire dataset
+Clinical$LiveDieTime
+surv_object <- Surv(time = Clinical$LiveDieTime, event = Clinical$VitalStatus)
+surv_object
+fit1 <- survfit(surv_object ~ Race, data = Clinical)
+summary(fit1)
+ggsurvplot(fit1, data = Clinical, pval = TRUE, surv.median.line ="h", title= "Survival Plot by Race" )
+
+##Survival Curve for high and low CTLA4 count
+CTLA4$LiveDieTime
+CTLA4_object <- Surv(time = CTLA4$LiveDieTime, event = CTLA4$VitalStatus)
+CTLA4_object
+fitCTLA4 <- survfit(CTLA4_object ~ CTLA4Type, data = CTLA4)
+summary(fitCTLA4)
+ggsurvplot(fitCTLA4, data = CTLA4, pval = TRUE, surv.median.line ="h", title="Survival Plot for High and Low CTLA4 groups")
+
+##Survive curve for high and low PDL1
+PDL1$LiveDieTime
+PDL1_object <- Surv(time = PDL1$LiveDieTime, event = PDL1$VitalStatus)
+PDL1_object
+fitPDL1 <- survfit(PDL1_object ~ PDL1Type, data = PDL1)
+summary(fitPDL1)
+ggsurvplot(fitPDL1, data = PDL1, pval = TRUE, surv.median.line ="h", title="Survival Plot for High and Low PDL1 groups")
+
+##Survive curve for high and low PD1
+PD1$LiveDieTime
+PD1$PD1Type
+PD1_object <- Surv(time = PD1$LiveDieTime, event = PD1$VitalStatus)
+PD1_object
+fitPD1 <- survfit(PD1_object ~ PD1Type, data = PD1)
+summary(fitPD1)
+ggsurvplot(fitPD1, data = PD1, pval = TRUE, surv.median.line ="h", title="Survival Plot for High and Low PD1 groups")
+
+##Survive curve for high and low TCRalpha
+TCRalpha$LiveDieTime
+TCRalpha_object <- Surv(time = TCRalpha$LiveDieTime, event = TCRalpha$VitalStatus)
+TCRalpha_object
+fitTCRalpha <- survfit(TCRalpha_object ~ TCRalphaType, data = TCRalpha)
+summary(fitTCRalpha)
+ggsurvplot(fitTCRalpha, data = TCRalpha, pval = TRUE, surv.median.line ="h", title ="Survival Plot for High and Low TCRalpha groups")
